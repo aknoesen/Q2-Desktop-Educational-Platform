@@ -1,0 +1,1193 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Q2 Desktop - Question Generation & Validation</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            color: #333;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            min-height: 100vh;
+        }
+
+        .header {
+            text-align: center;
+            color: white;
+            margin-bottom: 30px;
+        }
+
+        .header h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+        }
+
+        .header p {
+            font-size: 1.2em;
+            opacity: 0.9;
+        }
+
+        .workflow {
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+            overflow: hidden;
+            min-height: 600px;
+        }
+
+        .tabs {
+            display: flex;
+            background: #f8f9fa;
+            border-bottom: 1px solid #dee2e6;
+        }
+
+        .tab {
+            flex: 1;
+            padding: 20px;
+            text-align: center;
+            background: none;
+            border: none;
+            font-size: 1.1em;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            position: relative;
+        }
+
+        .tab.active {
+            background: white;
+            color: #667eea;
+        }
+
+        .tab.completed {
+            background: #d4edda;
+            color: #155724;
+        }
+
+        .tab:not(.active):hover {
+            background: #e9ecef;
+        }
+
+        .tab-content {
+            padding: 30px;
+            min-height: 500px;
+        }
+
+        .stage {
+            display: none;
+        }
+
+        .stage.active {
+            display: block;
+            animation: fadeIn 0.3s ease;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .form-group {
+            margin-bottom: 25px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: #495057;
+        }
+
+        .form-control {
+            width: 100%;
+            padding: 12px 16px;
+            border: 2px solid #dee2e6;
+            border-radius: 8px;
+            font-size: 14px;
+            transition: border-color 0.3s ease;
+        }
+
+        .form-control:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+
+        textarea.form-control {
+            resize: vertical;
+            min-height: 120px;
+        }
+
+        .textarea-large {
+            min-height: 200px;
+        }
+
+        .btn {
+            padding: 12px 24px;
+            border: none;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-decoration: none;
+            display: inline-block;
+            text-align: center;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(102, 126, 234, 0.3);
+        }
+
+        .btn-secondary {
+            background: #6c757d;
+            color: white;
+        }
+
+        .btn-success {
+            background: #28a745;
+            color: white;
+        }
+
+        .btn-warning {
+            background: #ffc107;
+            color: #212529;
+        }
+
+        .btn-danger {
+            background: #dc3545;
+            color: white;
+        }
+
+        .btn-outline {
+            background: transparent;
+            border: 2px solid #667eea;
+            color: #667eea;
+        }
+
+        .btn-outline:hover {
+            background: #667eea;
+            color: white;
+        }
+
+        .btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none !important;
+        }
+
+        .llm-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+
+        .llm-option {
+            padding: 20px;
+            border: 2px solid #dee2e6;
+            border-radius: 12px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-align: center;
+        }
+
+        .llm-option:hover {
+            border-color: #667eea;
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(0,0,0,0.1);
+        }
+
+        .llm-option.selected {
+            border-color: #667eea;
+            background: #f8f9ff;
+        }
+
+        .llm-option h3 {
+            margin-bottom: 10px;
+            color: #495057;
+        }
+
+        .llm-option p {
+            font-size: 14px;
+            color: #6c757d;
+        }
+
+        .progress-bar {
+            width: 100%;
+            height: 8px;
+            background: #e9ecef;
+            border-radius: 4px;
+            overflow: hidden;
+            margin: 20px 0;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #667eea, #764ba2);
+            transition: width 0.3s ease;
+        }
+
+        .status {
+            padding: 15px;
+            border-radius: 8px;
+            margin: 15px 0;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .status.success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+
+        .status.warning {
+            background: #fff3cd;
+            color: #856404;
+            border: 1px solid #ffeaa7;
+        }
+
+        .status.error {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+
+        .status.info {
+            background: #d1ecf1;
+            color: #0c5460;
+            border: 1px solid #bee5eb;
+        }
+
+        .loading {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #667eea;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .validation-results {
+            background: #f8f9fa;
+            border-radius: 8px;
+            padding: 20px;
+            margin-top: 20px;
+        }
+
+        .metric {
+            display: inline-block;
+            background: white;
+            padding: 15px 20px;
+            border-radius: 8px;
+            margin: 5px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        .metric-value {
+            font-size: 24px;
+            font-weight: bold;
+            color: #667eea;
+        }
+
+        .metric-label {
+            font-size: 14px;
+            color: #6c757d;
+            margin-top: 5px;
+        }
+
+        .question-list {
+            max-height: 300px;
+            overflow-y: auto;
+            border: 1px solid #dee2e6;
+            border-radius: 8px;
+            padding: 15px;
+            background: #f8f9fa;
+        }
+
+        .question-item {
+            padding: 10px;
+            margin-bottom: 10px;
+            background: white;
+            border-radius: 6px;
+            border-left: 4px solid #667eea;
+        }
+
+        .question-item.error {
+            border-left-color: #dc3545;
+        }
+
+        .hidden {
+            display: none !important;
+        }
+
+        .flex {
+            display: flex;
+            gap: 15px;
+            align-items: center;
+        }
+
+        .flex-1 {
+            flex: 1;
+        }
+
+        .text-center {
+            text-align: center;
+        }
+
+        .mt-3 {
+            margin-top: 20px;
+        }
+
+        .mb-3 {
+            margin-bottom: 20px;
+        }
+
+        .pre-wrap {
+            white-space: pre-wrap;
+            font-family: 'Consolas', 'Monaco', monospace;
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 6px;
+            border: 1px solid #dee2e6;
+            max-height: 200px;
+            overflow-y: auto;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🎓 Q2 Desktop</h1>
+            <p>Question Generation & Validation Workflow</p>
+        </div>
+
+        <div class="workflow">
+            <div class="tabs">
+                <button class="tab active" id="tab-1" onclick="switchTab(1)">
+                    📝 Step 1: Prompt Builder
+                </button>
+                <button class="tab" id="tab-2" onclick="switchTab(2)">
+                    🤖 Step 2: LLM Processing
+                </button>
+                <button class="tab" id="tab-3" onclick="switchTab(3)">
+                    ✅ Step 3: Validation
+                </button>
+            </div>
+
+            <!-- Stage 1: Prompt Builder -->
+            <div class="stage active" id="stage-1">
+                <div class="tab-content">
+                    <h2>📝 Build Your Educational Prompt</h2>
+                    <p class="mb-3">Create a prompt for generating questions. Choose your LLM and specify your requirements.</p>
+
+                    <div class="form-group">
+                        <label for="llm-selection">Choose your LLM:</label>
+                        <div class="llm-grid">
+                            <div class="llm-option" data-llm="openai" onclick="selectLLM('openai')">
+                                <h3>🧠 OpenAI GPT-4</h3>
+                                <p>ChatGPT, GPT-4, or API access</p>
+                            </div>
+                            <div class="llm-option" data-llm="claude" onclick="selectLLM('claude')">
+                                <h3>🎭 Claude (Anthropic)</h3>
+                                <p>Claude Sonnet, Opus, or API</p>
+                            </div>
+                            <div class="llm-option" data-llm="gemini" onclick="selectLLM('gemini')">
+                                <h3>💎 Google Gemini</h3>
+                                <p>Gemini Pro or Advanced</p>
+                            </div>
+                            <div class="llm-option selected" data-llm="copilot" onclick="selectLLM('copilot')">
+                                <h3>🤖 Microsoft Copilot</h3>
+                                <p>Copilot Pro or web interface</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="educational-context">Educational Context:</label>
+                        <div class="flex mb-3">
+                            <button class="btn btn-outline" onclick="loadExampleTemplate()">📋 Example User Prompt</button>
+                            <button class="btn btn-outline" onclick="loadPromptTemplate()">📝 User Prompt Template</button>
+                        </div>
+                        <textarea id="educational-context" class="form-control" 
+                                  placeholder="Enter your educational context here...">You are an expert in antennas, and teaching a lecture. The topic is patch antennas and implementation on PCB, polarization characteristics are of particular interest.</textarea>
+                    </div>
+
+                    <div class="flex">
+                        <div class="form-group flex-1">
+                            <label for="question-count">Number of Questions:</label>
+                            <select id="question-count" class="form-control">
+                                <option value="5" selected>5 questions</option>
+                                <option value="10">10 questions</option>
+                                <option value="15">15 questions</option>
+                                <option value="20">20 questions</option>
+                            </select>
+                        </div>
+                        <div class="form-group flex-1">
+                            <label for="question-types">Question Types:</label>
+                            <select id="question-types" class="form-control">
+                                <option value="mixed" selected>Mixed types</option>
+                                <option value="multiple_choice">Multiple choice only</option>
+                                <option value="multiple_dropdowns">Multiple dropdowns only</option>
+                                <option value="numerical">Numerical only</option>
+                                <option value="true_false">True/False only</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="flex">
+                        <button class="btn btn-outline" onclick="savePromptDraft()">💾 Save User Prompt</button>
+                        <div class="flex-1"></div>
+                        <button class="btn btn-primary" onclick="generatePrompt()">
+                            🚀 Generate Complete Prompt
+                        </button>
+                    </div>
+
+                    <div id="generated-prompt" class="hidden">
+                        <h3 class="mt-3">📋 Complete Prompt:</h3>
+                        <div class="pre-wrap" id="prompt-output"></div>
+                        
+                        <div class="status info mt-3">
+                            <span>ℹ️</span>
+                            <div>
+                                <strong>How to use this prompt:</strong>
+                                <ol style="margin: 10px 0 0 20px;">
+                                    <li><strong>Save the prompt as a file</strong> using the button below</li>
+                                    <li><strong>Go to your chosen LLM</strong> (Microsoft Copilot, ChatGPT, etc.)</li>
+                                    <li><strong>Upload/attach the file</strong> to your LLM conversation</li>
+                                    <li><strong>Ask the LLM to process the file</strong> (e.g., "Please follow the instructions in this file")</li>
+                                </ol>
+                            </div>
+                        </div>
+                        
+                        <div class="mt-3">
+                            <button class="btn btn-primary" onclick="savePromptFile()">💾 Save Complete Prompt as File</button>
+                            <button class="btn btn-outline" onclick="copyPrompt()">📋 Copy to Clipboard</button>
+                            <button class="btn btn-success" onclick="completeStage1()">✅ Proceed to Step 2</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Stage 2: LLM Processing -->
+            <div class="stage" id="stage-2">
+                <div class="tab-content">
+                    <h2>🤖 Process LLM Response</h2>
+                    <p class="mb-3">Copy the response from your LLM and paste it below. We'll help you prepare it for validation.</p>
+
+                    <div class="status info">
+                        <span>ℹ️</span>
+                        <div>
+                            <strong>Instructions:</strong>
+                            <ol style="margin: 10px 0 0 20px;">
+                                <li>Copy the complete prompt from Step 1 to your chosen LLM</li>
+                                <li>Wait for the LLM to generate the questions</li>
+                                <li>Copy the entire LLM response and paste it below</li>
+                                <li>Use the processing options to clean up the text</li>
+                            </ol>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="llm-response">LLM Response:</label>
+                        <textarea id="llm-response" class="form-control textarea-large" 
+                                  placeholder="Paste the complete response from your LLM here..."></textarea>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Processing Options:</label>
+                        <div class="flex">
+                            <label style="display: flex; align-items: center; gap: 8px;">
+                                <input type="checkbox" id="auto-extract" checked>
+                                Auto-extract JSON from response
+                            </label>
+                            <label style="display: flex; align-items: center; gap: 8px;">
+                                <input type="checkbox" id="clean-markdown" checked>
+                                Remove markdown formatting
+                            </label>
+                            <label style="display: flex; align-items: center; gap: 8px;">
+                                <input type="checkbox" id="fix-quotes" checked>
+                                Fix quote characters
+                            </label>
+                        </div>
+                    </div>
+
+                    <div class="flex">
+                        <button class="btn btn-outline" onclick="loadFromFile()">📁 Load from File</button>
+                        <button class="btn btn-secondary" onclick="processText()">🔧 Process Text</button>
+                        <div class="flex-1"></div>
+                        <button class="btn btn-primary" onclick="previewProcessed()" id="preview-btn" disabled>
+                            👀 Preview Processed
+                        </button>
+                    </div>
+
+                    <div id="processed-preview" class="hidden">
+                        <h3 class="mt-3">🔍 Processed JSON Preview:</h3>
+                        <div class="pre-wrap" id="processed-output"></div>
+                        <div class="validation-results">
+                            <div id="json-status"></div>
+                        </div>
+                        <div class="mt-3">
+                            <button class="btn btn-warning" onclick="editManually()">✏️ Edit Manually</button>
+                            <button class="btn btn-outline" onclick="saveDraft()">💾 Save Draft</button>
+                            <button class="btn btn-success" onclick="completeStage2()">✅ Proceed to Validation</button>
+                        </div>
+                    </div>
+
+                    <div id="manual-editor" class="hidden">
+                        <h3 class="mt-3">✏️ Manual Editor:</h3>
+                        <textarea id="manual-json" class="form-control textarea-large" 
+                                  placeholder="Edit the JSON manually here..."></textarea>
+                        <div class="mt-3">
+                            <button class="btn btn-secondary" onclick="validateJSON()">🔍 Validate JSON</button>
+                            <button class="btn btn-success" onclick="saveManualEdits()">✅ Save Changes</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Stage 3: Validation -->
+            <div class="stage" id="stage-3">
+                <div class="tab-content">
+                    <h2>✅ Question Validation</h2>
+                    <p class="mb-3">Validate your questions against Q2LMS requirements and fix any issues.</p>
+
+                    <div class="status info" id="validation-status">
+                        <span>ℹ️</span>
+                        <span>Ready to validate questions. Click "Run Validation" to begin.</span>
+                    </div>
+
+                    <div class="flex">
+                        <label style="display: flex; align-items: center; gap: 8px;">
+                            <input type="checkbox" id="auto-fix-unicode" checked>
+                            Auto-fix Unicode to LaTeX
+                        </label>
+                        <label style="display: flex; align-items: center; gap: 8px;">
+                            <input type="checkbox" id="verbose-output" checked>
+                            Show detailed results
+                        </label>
+                        <div class="flex-1"></div>
+                        <button class="btn btn-primary" onclick="runValidation()" id="validate-btn">
+                            🔍 Run Validation
+                        </button>
+                    </div>
+
+                    <div id="validation-progress" class="hidden">
+                        <div class="progress-bar">
+                            <div class="progress-fill" id="progress-fill" style="width: 0%"></div>
+                        </div>
+                        <div class="text-center">
+                            <div class="loading"></div>
+                            <span id="progress-text">Starting validation...</span>
+                        </div>
+                    </div>
+
+                    <div id="validation-results" class="hidden">
+                        <h3>📊 Validation Results</h3>
+                        <div class="validation-results">
+                            <div id="metrics-display"></div>
+                            <div id="detailed-results"></div>
+                        </div>
+
+                        <div class="mt-3">
+                            <div class="flex">
+                                <button class="btn btn-success" onclick="exportReady()" id="export-ready-btn">
+                                    📤 Export Ready Questions
+                                </button>
+                                <button class="btn btn-outline" onclick="exportAll()">
+                                    📋 Export All Questions
+                                </button>
+                                <button class="btn btn-warning" onclick="sendToQ2LMS()" id="send-q2lms-btn">
+                                    🚀 Send to Q2LMS
+                                </button>
+                            </div>
+                        </div>
+
+                        <div id="error-section" class="hidden">
+                            <h4>❌ Issues Found</h4>
+                            <p>Some questions need attention. Would you like to send an error report to help improve the system?</p>
+                            <div class="mt-3">
+                                <button class="btn btn-danger" onclick="submitErrorReport()">
+                                    📧 Submit Error Report
+                                </button>
+                                <button class="btn btn-secondary" onclick="retryValidation()">
+                                    🔄 Retry Validation
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const { ipcRenderer } = require('electron');
+        
+        // Global state
+        let currentStage = 1;
+        let selectedLLM = 'copilot'; // Default to Microsoft Copilot
+        let generatedPrompt = '';
+        let processedData = null;
+        let validationResults = null;
+
+        // Initialize app
+        document.addEventListener('DOMContentLoaded', async () => {
+            try {
+                const appInfo = await ipcRenderer.invoke('app-ready');
+                console.log('App initialized:', appInfo);
+            } catch (error) {
+                console.error('App initialization error:', error);
+            }
+        });
+
+        // Tab switching
+        function switchTab(stage) {
+            // Hide all stages
+            document.querySelectorAll('.stage').forEach(s => s.classList.remove('active'));
+            document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+            
+            // Show selected stage
+            document.getElementById(`stage-${stage}`).classList.add('active');
+            document.getElementById(`tab-${stage}`).classList.add('active');
+            
+            currentStage = stage;
+        }
+
+        // Stage 1: Prompt Builder
+        function selectLLM(llm) {
+            // Clear previous selection
+            document.querySelectorAll('.llm-option').forEach(opt => opt.classList.remove('selected'));
+            
+            // Select new LLM
+            document.querySelector(`[data-llm="${llm}"]`).classList.add('selected');
+            selectedLLM = llm;
+        }
+
+        function generatePrompt() {
+            const context = document.getElementById('educational-context').value.trim();
+            const count = document.getElementById('question-count').value;
+            const types = document.getElementById('question-types').value;
+
+            if (!context) {
+                alert('Please provide educational context');
+                return;
+            }
+
+            if (!selectedLLM) {
+                alert('Please select an LLM');
+                return;
+            }
+
+            // Load preamble and postamble from files
+            loadPromptFiles(context, count, types);
+        }
+
+        async function loadPromptFiles(context, count, types) {
+            try {
+                const btn = event.target;
+                btn.disabled = true;
+                btn.innerHTML = '<div class="loading"></div> Loading template...';
+
+                // Load preamble file
+                const preambleResult = await ipcRenderer.invoke('load-prompt-file', 
+                    'C:\\Users\\aknoesen\\Documents\\Knoesen\\Project-Root-Q2QTI\\q2prompt\\q2prompt_preamble_default.txt'
+                );
+                
+                // Load postamble file  
+                const postambleResult = await ipcRenderer.invoke('load-prompt-file',
+                    'C:\\Users\\aknoesen\\Documents\\Knoesen\\Project-Root-Q2QTI\\q2prompt\\q2prompt_postamble_default.txt'
+                );
+
+                if (!preambleResult.success || !postambleResult.success) {
+                    throw new Error('Could not load prompt template files');
+                }
+
+                // Build complete prompt: preamble + user context + postamble
+                let prompt = preambleResult.content + '\n\n';
+                prompt += context + '\n\n';
+                prompt += `Generate ${count} questions`;
+                
+                if (types !== 'mixed') {
+                    prompt += ` of type: ${types.replace('_', ' ')}`;
+                }
+                
+                prompt += '.\n\n' + postambleResult.content;
+
+                generatedPrompt = prompt;
+                
+                document.getElementById('prompt-output').textContent = prompt;
+                document.getElementById('generated-prompt').classList.remove('hidden');
+
+                btn.disabled = false;
+                btn.innerHTML = '🚀 Generate Complete Prompt';
+
+            } catch (error) {
+                alert(`❌ Error loading prompt template: ${error.message}`);
+                
+                // Fallback to basic prompt if files not found
+                let prompt = `${context}\n\n`;
+                prompt += `Generate ${count} questions`;
+                
+                if (types !== 'mixed') {
+                    prompt += ` of type: ${types.replace('_', ' ')}`;
+                }
+                
+                prompt += ` in JSON format with proper structure for educational assessment.`;
+
+                generatedPrompt = prompt;
+                document.getElementById('prompt-output').textContent = prompt;
+                document.getElementById('generated-prompt').classList.remove('hidden');
+
+                const btn = event.target;
+                btn.disabled = false;
+                btn.innerHTML = '🚀 Generate Complete Prompt';
+            }
+        }
+
+        async function savePromptFile() {
+            if (!generatedPrompt) {
+                alert('No prompt to save');
+                return;
+            }
+
+            try {
+                const result = await ipcRenderer.invoke('save-file', generatedPrompt, 'q2_prompt_for_llm.txt');
+                
+                if (result.success) {
+                    alert(`✅ Complete prompt saved as file!\n\nLocation: ${result.filePath}\n\nYou can now upload this file to your LLM.`);
+                } else if (!result.canceled) {
+                    alert(`❌ Save failed: ${result.error || 'Unknown error'}`);
+                }
+            } catch (error) {
+                console.error('Save error:', error);
+                alert(`❌ Save failed: ${error.message}`);
+            }
+        }
+
+        function copyPrompt() {
+            navigator.clipboard.writeText(generatedPrompt).then(() => {
+                const btn = event.target;
+                const originalText = btn.textContent;
+                btn.textContent = '✅ Copied!';
+                setTimeout(() => {
+                    btn.textContent = originalText;
+                }, 2000);
+            });
+        }
+
+        function completeStage1() {
+            document.getElementById('tab-1').classList.add('completed');
+            switchTab(2);
+        }
+
+        // Stage 2: LLM Processing
+        function processText() {
+            const rawText = document.getElementById('llm-response').value.trim();
+            
+            if (!rawText) {
+                alert('Please paste the LLM response first');
+                return;
+            }
+
+            let processed = rawText;
+            
+            // Auto-extract JSON
+            if (document.getElementById('auto-extract').checked) {
+                const jsonMatch = processed.match(/\{[\s\S]*\}/);
+                if (jsonMatch) {
+                    processed = jsonMatch[0];
+                }
+            }
+            
+            // Clean markdown
+            if (document.getElementById('clean-markdown').checked) {
+                processed = processed.replace(/```json\s*/g, '');
+                processed = processed.replace(/```\s*/g, '');
+                processed = processed.replace(/^\s*json\s*/gm, '');
+            }
+            
+            // Fix quotes
+            if (document.getElementById('fix-quotes').checked) {
+                processed = processed.replace(/[""]/g, '"');
+                processed = processed.replace(/['']/g, "'");
+            }
+            
+            document.getElementById('processed-output').textContent = processed;
+            document.getElementById('processed-preview').classList.remove('hidden');
+            document.getElementById('preview-btn').disabled = false;
+            
+            // Validate JSON
+            try {
+                processedData = JSON.parse(processed);
+                document.getElementById('json-status').innerHTML = 
+                    '<div class="status success"><span>✅</span><span>Valid JSON format detected</span></div>';
+            } catch (error) {
+                document.getElementById('json-status').innerHTML = 
+                    `<div class="status error"><span>❌</span><span>JSON Error: ${error.message}</span></div>`;
+                processedData = null;
+            }
+        }
+
+        function previewProcessed() {
+            if (!processedData) {
+                alert('Please process the text first and ensure valid JSON');
+                return;
+            }
+            
+            // Show a preview of the questions
+            const questions = processedData.questions || processedData;
+            const preview = `Found ${questions.length} questions:\n\n` + 
+                          questions.slice(0, 3).map((q, i) => 
+                              `${i+1}. ${q.title || 'Untitled'}\n   Type: ${q.type || 'unknown'}`
+                          ).join('\n') + 
+                          (questions.length > 3 ? `\n... and ${questions.length - 3} more` : '');
+            
+            alert(preview);
+        }
+
+        function editManually() {
+            document.getElementById('manual-json').value = document.getElementById('processed-output').textContent;
+            document.getElementById('manual-editor').classList.remove('hidden');
+        }
+
+        function validateJSON() {
+            const text = document.getElementById('manual-json').value;
+            try {
+                JSON.parse(text);
+                alert('✅ Valid JSON');
+            } catch (error) {
+                alert(`❌ JSON Error: ${error.message}`);
+            }
+        }
+
+        function saveManualEdits() {
+            const text = document.getElementById('manual-json').value;
+            try {
+                processedData = JSON.parse(text);
+                document.getElementById('processed-output').textContent = text;
+                document.getElementById('manual-editor').classList.add('hidden');
+                document.getElementById('json-status').innerHTML = 
+                    '<div class="status success"><span>✅</span><span>Manual edits saved</span></div>';
+            } catch (error) {
+                alert(`❌ Cannot save: ${error.message}`);
+            }
+        }
+
+        function completeStage2() {
+            if (!processedData) {
+                alert('Please process and validate the JSON first');
+                return;
+            }
+            
+            // Debug log to verify data exists
+            console.log('Stage 2 data being passed:', processedData);
+            
+            document.getElementById('tab-2').classList.add('completed');
+            switchTab(3);
+            
+            // Update validation status to show data is ready
+            document.getElementById('validation-status').innerHTML = 
+                `<span>ℹ️</span><span>Ready to validate ${(processedData.questions || processedData).length} questions. Click "Run Validation" to begin.</span>`;
+        }
+
+        // Stage 3: Validation
+        async function runValidation() {
+            if (!processedData) {
+                alert('No data to validate. Please complete Stage 2 first.');
+                console.log('processedData is:', processedData);
+                return;
+            }
+
+            // Debug log to verify data structure
+            console.log('Validation starting with data:', processedData);
+            const questionsArray = processedData.questions || processedData;
+            console.log('Questions array:', questionsArray);
+
+            const btn = document.getElementById('validate-btn');
+            btn.disabled = true;
+            btn.innerHTML = '<div class="loading"></div> Validating...';
+            
+            document.getElementById('validation-progress').classList.remove('hidden');
+            updateProgress(20, 'Preparing data...');
+
+            try {
+                const options = {
+                    verbose: document.getElementById('verbose-output').checked,
+                    noAutoFix: !document.getElementById('auto-fix-unicode').checked,
+                    generateOutput: true
+                };
+
+                updateProgress(50, 'Running Q2Validate...');
+
+                const result = await ipcRenderer.invoke('run-q2validate', processedData, options);
+                
+                updateProgress(100, 'Validation complete!');
+
+                if (result.success) {
+                    validationResults = result;
+                    displayValidationResults(result);
+                } else {
+                    throw new Error(result.error || 'Validation failed');
+                }
+
+            } catch (error) {
+                document.getElementById('validation-status').innerHTML = 
+                    `<div class="status error"><span>❌</span><span>Validation Error: ${error.message}</span></div>`;
+                console.error('Validation error:', error);
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = '🔍 Run Validation';
+                setTimeout(() => {
+                    document.getElementById('validation-progress').classList.add('hidden');
+                }, 1000);
+            }
+        }
+
+        function updateProgress(percentage, text) {
+            document.getElementById('progress-fill').style.width = `${percentage}%`;
+            document.getElementById('progress-text').textContent = text;
+        }
+
+        function displayValidationResults(result) {
+            document.getElementById('validation-results').classList.remove('hidden');
+            
+            // Parse metrics from output
+            const output = result.output || '';
+            const metrics = parseValidationMetrics(output);
+            
+            // Display metrics
+            const metricsHtml = `
+                <div class="metric">
+                    <div class="metric-value">${metrics.total}</div>
+                    <div class="metric-label">Total Questions</div>
+                </div>
+                <div class="metric">
+                    <div class="metric-value">${metrics.valid}</div>
+                    <div class="metric-label">Schema Valid</div>
+                </div>
+                <div class="metric">
+                    <div class="metric-value">${metrics.unicode}</div>
+                    <div class="metric-label">Unicode Issues</div>
+                </div>
+                <div class="metric">
+                    <div class="metric-value">${metrics.ready}</div>
+                    <div class="metric-label">Ready for Q2LMS</div>
+                </div>
+                <div class="metric">
+                    <div class="metric-value">${metrics.successRate}%</div>
+                    <div class="metric-label">Success Rate</div>
+                </div>
+            `;
+            
+            document.getElementById('metrics-display').innerHTML = metricsHtml;
+            
+            // Display detailed output
+            document.getElementById('detailed-results').innerHTML = 
+                `<div class="pre-wrap">${output}</div>`;
+            
+            // Show/hide error section
+            if (metrics.ready < metrics.total) {
+                document.getElementById('error-section').classList.remove('hidden');
+            }
+            
+            // Enable export buttons
+            document.getElementById('export-ready-btn').disabled = metrics.ready === 0;
+            document.getElementById('send-q2lms-btn').disabled = metrics.ready === 0;
+        }
+
+        function parseValidationMetrics(output) {
+            const total = (output.match(/Total Questions: (\d+)/) || [0, 0])[1];
+            const valid = (output.match(/Schema Valid: (\d+)/) || [0, 0])[1];
+            const unicode = (output.match(/Unicode Issues Found: (\d+)/) || [0, 0])[1];
+            const ready = (output.match(/Ready for Q2LMS: (\d+)/) || [0, 0])[1];
+            const successRate = (output.match(/Success Rate: ([\d.]+)%/) || [0, 0])[1];
+            
+            return {
+                total: parseInt(total),
+                valid: parseInt(valid),
+                unicode: parseInt(unicode),
+                ready: parseInt(ready),
+                successRate: parseFloat(successRate).toFixed(1)
+            };
+        }
+
+        async function exportReady() {
+            if (!validationResults || !validationResults.validatedData) {
+                alert('No validated data available');
+                return;
+            }
+
+            try {
+                const content = JSON.stringify(validationResults.validatedData, null, 2);
+                const result = await ipcRenderer.invoke('save-file', content, 'q2validate_ready.json');
+                
+                if (result.success) {
+                    alert(`✅ Ready questions exported to: ${result.filePath}`);
+                }
+            } catch (error) {
+                alert(`❌ Export failed: ${error.message}`);
+            }
+        }
+
+        async function exportAll() {
+            if (!processedData) {
+                alert('No data to export');
+                return;
+            }
+
+            try {
+                const content = JSON.stringify(processedData, null, 2);
+                const result = await ipcRenderer.invoke('save-file', content, 'all_questions.json');
+                
+                if (result.success) {
+                    alert(`✅ All questions exported to: ${result.filePath}`);
+                }
+            } catch (error) {
+                alert(`❌ Export failed: ${error.message}`);
+            }
+        }
+
+        async function sendToQ2LMS() {
+            if (!validationResults || !validationResults.validatedData) {
+                alert('No validated data available');
+                return;
+            }
+
+            // For now, just export the file with Q2LMS-ready format
+            await exportReady();
+            alert('📤 Questions are ready for Q2LMS import!\n\nNext steps:\n1. Open Q2LMS\n2. Import the exported JSON file\n3. Review and deploy questions');
+        }
+
+        async function submitErrorReport() {
+            const reportData = {
+                stage: 'validation',
+                selectedLLM: selectedLLM,
+                originalPrompt: generatedPrompt,
+                llmResponse: document.getElementById('llm-response').value,
+                processedData: processedData,
+                validationOutput: validationResults ? validationResults.output : 'No validation results',
+                userNotes: prompt('Optional: Describe what you were trying to achieve or any issues you encountered:') || ''
+            };
+
+            try {
+                const result = await ipcRenderer.invoke('submit-error-report', reportData);
+                
+                if (result.success) {
+                    alert(`✅ Error report submitted successfully!\n\nReport ID: ${result.reportId}\n\nThank you for helping improve the system.`);
+                } else {
+                    alert(`❌ Failed to submit report: ${result.error}`);
+                }
+            } catch (error) {
+                alert(`❌ Error submitting report: ${error.message}`);
+            }
+        }
+
+        function retryValidation() {
+            // Clear previous results and allow user to modify data
+            document.getElementById('validation-results').classList.add('hidden');
+            document.getElementById('error-section').classList.add('hidden');
+            
+            // Go back to stage 2 for editing
+            switchTab(2);
+        }
+
+        // Utility functions
+        async function loadFromFile() {
+            try {
+                const result = await ipcRenderer.invoke('load-file');
+                if (result.success) {
+                    document.getElementById('llm-response').value = result.content;
+                }
+            } catch (error) {
+                alert(`❌ Failed to load file: ${error.message}`);
+            }
+        }
+
+        function loadExampleTemplate() {
+            // Load the specific antenna example
+            const antennaExample = `You are an expert in antennas, and teaching a lecture. The topic is patch antennas and implementation on PCB, polarization characteristics are of particular interest.`;
+            document.getElementById('educational-context').value = antennaExample;
+        }
+
+        async function loadPromptTemplate() {
+            // Load the generic template with placeholders
+            const genericTemplate = `You are an expert in [SUBJECT], and teaching a lecture. The topic is [TOPIC], [SPECIFIC_FOCUS] are of particular interest.`;
+            document.getElementById('educational-context').value = genericTemplate;
+        }
+
+        function clearContext() {
+            document.getElementById('educational-context').value = '';
+            document.getElementById('educational-context').focus();
+        }
+
+        async function savePromptDraft() {
+            const data = {
+                llm: selectedLLM,
+                context: document.getElementById('educational-context').value,
+                count: document.getElementById('question-count').value,
+                types: document.getElementById('question-types').value,
+                timestamp: new Date().toISOString()
+            };
+
+            try {
+                const content = JSON.stringify(data, null, 2);
+                const result = await ipcRenderer.invoke('save-file', content, 'prompt_draft.json');
+                
+                if (result.success) {
+                    alert(`✅ Prompt draft saved to: ${result.filePath}`);
+                }
+            } catch (error) {
+                alert(`❌ Save failed: ${error.message}`);
+            }
+        }
+
+        async function saveDraft() {
+            if (!processedData) {
+                alert('No data to save');
+                return;
+            }
+
+            try {
+                const content = JSON.stringify(processedData, null, 2);
+                const result = await ipcRenderer.invoke('save-file', content, 'processing_draft.json');
+                
+                if (result.success) {
+                    alert(`✅ Draft saved to: ${result.filePath}`);
+                }
+            } catch (error) {
+                alert(`❌ Save failed: ${error.message}`);
+            }
+        }
+    </script>
+</body>
+</html>

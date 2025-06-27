@@ -1,0 +1,10 @@
+﻿node_modules/
+*.log
+temp/
+error-reports/
+dist/
+build/
+__pycache__/
+*.pyc
+.DS_Store
+Thumbs.db

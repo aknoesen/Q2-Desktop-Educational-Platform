@@ -1,0 +1,453 @@
+# Git Repository Setup Script for Q2 Desktop Project
+# Creates local Git repo and optionally pushes to GitHub
+
+param(
+    [string]$ProjectRoot = "C:\Users\aknoesen\Documents\Knoesen\Project-Root-Q2QTI",
+    [string]$RepoName = "Q2-Desktop-Educational-Platform",
+    [switch]$SkipGitHubPush
+)
+
+Write-Host "🚀 Q2 Desktop Git Repository Setup" -ForegroundColor Cyan
+Write-Host "====================================" -ForegroundColor Cyan
+
+# Check if Git is installed
+try {
+    $gitVersion = git --version
+    Write-Host "✅ Git found: $gitVersion" -ForegroundColor Green
+} catch {
+    Write-Host "❌ Git not found. Please install Git first:" -ForegroundColor Red
+    Write-Host "   Download from: https://git-scm.com/download/win" -ForegroundColor Yellow
+    exit 1
+}
+
+# Verify project root exists
+if (-not (Test-Path $ProjectRoot)) {
+    Write-Host "❌ Error: Project root directory not found: $ProjectRoot" -ForegroundColor Red
+    exit 1
+}
+
+Write-Host "📁 Project Root: $ProjectRoot" -ForegroundColor Green
+
+# Navigate to project root
+Set-Location $ProjectRoot
+
+# Initialize Git repository
+Write-Host "`n📦 Initializing Git repository..." -ForegroundColor Yellow
+
+if (Test-Path ".git") {
+    Write-Host "⚠️  Git repository already exists. Checking status..." -ForegroundColor Yellow
+    git status --porcelain
+} else {
+    git init
+    Write-Host "✅ Git repository initialized" -ForegroundColor Green
+}
+
+# Create comprehensive .gitignore
+Write-Host "`n📄 Creating .gitignore..." -ForegroundColor Yellow
+$GitIgnoreContent = @'
+# Q2 Desktop Project .gitignore
+
+# Node.js dependencies
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Electron build outputs
+Q2-Desktop-App/dist/
+Q2-Desktop-App/build/
+Q2-Desktop-App/out/
+*.tgz
+
+# Runtime and temporary files
+Q2-Desktop-App/temp/
+Q2-Desktop-App/error-reports/
+*.log
+
+# Python bytecode and caches
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+
+# Virtual environments
+venv/
+env/
+ENV/
+env.bak/
+venv.bak/
+q2validate/backups/
+
+# IDE and editor files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS generated files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# Sensitive data and user-specific files
+*.key
+*.pem
+config.json
+secrets.json
+
+# Test and development files
+test_output/
+debug_logs/
+*.test.json
+
+# Backup files
+*.bak
+*.backup
+*.old
+
+# Temporary office files
+~$*
+
+# Windows specific
+desktop.ini
+'@
+
+Set-Content -Path ".gitignore" -Value $GitIgnoreContent -Encoding UTF8
+Write-Host "✅ .gitignore created" -ForegroundColor Green
+
+# Create README.md
+Write-Host "`n📄 Creating README.md..." -ForegroundColor Yellow
+$ReadmeContent = @"
+# Q2 Desktop Educational Platform
+
+A comprehensive desktop application for educational question generation and validation workflow.
+
+## 🎯 Overview
+
+Q2 Desktop simplifies the entire educational question lifecycle from prompt creation to LMS deployment. Built with Electron, it provides an intuitive 3-stage workflow for educators to generate, validate, and deploy educational questions.
+
+## 🚀 Features
+
+### Stage 1: Prompt Builder
+- **LLM Integration**: Works with ChatGPT, Claude, Gemini, Microsoft Copilot
+- **Template System**: Automated prompt construction with preamble/postamble
+- **File Export**: Save prompts as files for LLM upload (handles length limits)
+- **Smart Defaults**: Microsoft Copilot pre-selected, antenna examples included
+
+### Stage 2: LLM Processing  
+- **Auto-Processing**: Extract JSON, clean markdown, fix formatting
+- **Manual Editing**: Built-in JSON editor with validation
+- **Preview System**: Visual confirmation of processed questions
+- **Error Handling**: Clear feedback on JSON issues
+
+### Stage 3: Validation
+- **Q2LMS Integration**: Uses Q2LMS validation rules for compatibility
+- **Unicode Conversion**: Automatic Unicode to LaTeX transformation
+- **Results Dashboard**: Visual metrics and detailed error reporting
+- **Export Options**: Ready questions, all questions, error reports
+
+## 🛠 Technical Architecture
+
+- **Frontend**: HTML + CSS + JavaScript (Electron renderer)
+- **Backend**: Node.js (Electron main process)
+- **Integration**: Python subprocess calls to Q2 modules
+- **Modules**: Clean architecture with single source of truth
+
+## 📋 Prerequisites
+
+- **Node.js** v16+ (tested with v22.17.0)
+- **Python** 3.8+ (for Q2 validation modules)
+- **Windows** (tested), Mac/Linux compatible
+
+## 🔧 Installation
+
+1. **Clone the repository**
+   \`\`\`bash
+   git clone [repository-url]
+   cd Project-Root-Q2QTI
+   \`\`\`
+
+2. **Install dependencies**
+   \`\`\`bash
+   cd Q2-Desktop-App
+   npm install
+   \`\`\`
+
+3. **Verify Q2 modules**
+   \`\`\`bash
+   cd ../q2validate
+   python q2validate_cli.py --help
+   \`\`\`
+
+## 🚀 Usage
+
+### Development Mode
+\`\`\`bash
+cd Q2-Desktop-App
+npm run dev
+\`\`\`
+
+### Production Build
+\`\`\`bash
+npm run build-win    # Windows installer
+npm run build        # Cross-platform
+\`\`\`
+
+### User Workflow
+1. **Build Prompt**: Choose LLM, enter educational context, generate complete prompt
+2. **Upload to LLM**: Save prompt as file, upload to chosen LLM platform  
+3. **Process Response**: Paste LLM output, auto-clean and validate JSON
+4. **Validate Questions**: Run Q2LMS validation, export ready questions
+
+## 📁 Project Structure
+
+\`\`\`
+Project-Root-Q2QTI/
+├── Q2-Desktop-App/          # Electron desktop application
+│   ├── src/index.html       # Main UI interface
+│   ├── main.js             # Electron backend
+│   └── package.json        # Dependencies and scripts
+├── q2lms/                  # Q2LMS modules (source of truth)
+│   └── modules/            # Validation and conversion logic
+├── q2validate/             # CLI validation tool
+│   └── q2validate_cli.py   # Clean CLI interface
+├── q2prompt/               # Prompt generation
+│   ├── q2prompt_preamble_default.txt
+│   └── q2prompt_postamble_default.txt
+└── docs/                   # Documentation and transition guides
+\`\`\`
+
+## 🎯 Success Metrics
+
+- **User Adoption**: Simplified workflow increases tester participation
+- **Quality Improvement**: Template system improves LLM prompt quality  
+- **Development Efficiency**: Complete workflow in single application
+
+## 🐛 Known Issues
+
+- **Subprocess Integration**: Python CLI calls from Electron (debugging in progress)
+- **Cross-Platform Paths**: Windows paths hardcoded (needs OS detection)
+
+## 🤝 Contributing
+
+1. Fork the repository
+2. Create feature branch (\`git checkout -b feature/amazing-feature\`)
+3. Commit changes (\`git commit -m 'Add amazing feature'\`)
+4. Push to branch (\`git push origin feature/amazing-feature\`)
+5. Open Pull Request
+
+## 📝 Development Status
+
+**Current Version**: 0.95.0 (95% complete)  
+**Status**: Final debugging phase  
+**Next Release**: v1.0.0 (production ready)
+
+## 📄 License
+
+This project is licensed under the MIT License - see the LICENSE file for details.
+
+## 🙏 Acknowledgments
+
+- **Electron Framework**: Cross-platform desktop app framework
+- **Q2LMS Platform**: Educational question management system
+- **Educational Community**: Feedback and testing support
+
+---
+
+**Built with ❤️ for educators worldwide** 🎓
+"@
+
+Set-Content -Path "README.md" -Value $ReadmeContent -Encoding UTF8
+Write-Host "✅ README.md created" -ForegroundColor Green
+
+# Create docs directory and copy transition documents
+Write-Host "`n📄 Creating documentation..." -ForegroundColor Yellow
+$DocsDir = "docs"
+if (-not (Test-Path $DocsDir)) {
+    New-Item -ItemType Directory -Path $DocsDir | Out-Null
+}
+
+# Add current transition document
+$TransitionDoc = @"
+# Development Transition Documents
+
+This directory contains comprehensive documentation of the Q2 Desktop development process.
+
+## Files
+
+- **transition-v1.md**: Initial development roadmap and architecture
+- **transition-v2.md**: Current status and final debugging steps  
+- **setup-instructions.md**: Installation and deployment guide
+- **troubleshooting.md**: Common issues and solutions
+
+## Development History
+
+The Q2 Desktop application was developed in a single intensive session on June 27, 2025, achieving 95% completion with only final subprocess debugging remaining.
+
+Key achievements:
+- Complete 3-stage workflow implementation
+- Professional UI with intuitive user experience  
+- Template-based prompt generation system
+- Clean module architecture with no code duplication
+- File-based LLM integration workflow
+
+## Next Steps
+
+1. Debug Python subprocess integration (15-30 minutes)
+2. Package application for distribution
+3. Deploy to educational testers
+4. Collect feedback and iterate
+
+Total development time: ~6 hours for complete application
+"@
+
+Set-Content -Path "$DocsDir/README.md" -Value $TransitionDoc -Encoding UTF8
+Write-Host "✅ Documentation structure created" -ForegroundColor Green
+
+# Set up Git user (if not already configured)
+Write-Host "`n👤 Configuring Git user..." -ForegroundColor Yellow
+try {
+    $gitUser = git config user.name
+    $gitEmail = git config user.email
+    
+    if (-not $gitUser) {
+        $userName = Read-Host "Enter your Git username"
+        git config user.name "$userName"
+        Write-Host "✅ Git username set: $userName" -ForegroundColor Green
+    } else {
+        Write-Host "✅ Git user already configured: $gitUser" -ForegroundColor Green
+    }
+    
+    if (-not $gitEmail) {
+        $userEmail = Read-Host "Enter your Git email"
+        git config user.email "$userEmail"
+        Write-Host "✅ Git email set: $userEmail" -ForegroundColor Green
+    } else {
+        Write-Host "✅ Git email already configured: $gitEmail" -ForegroundColor Green
+    }
+} catch {
+    Write-Host "⚠️  Git user configuration skipped" -ForegroundColor Yellow
+}
+
+# Stage all files
+Write-Host "`n📦 Staging files for commit..." -ForegroundColor Yellow
+git add .
+$stagedFiles = git diff --staged --name-only
+Write-Host "✅ Files staged:" -ForegroundColor Green
+$stagedFiles | ForEach-Object { Write-Host "  + $_" -ForegroundColor Gray }
+
+# Create initial commit
+Write-Host "`n💾 Creating initial commit..." -ForegroundColor Yellow
+$commitMessage = "Initial commit: Q2 Desktop Educational Platform v0.95
+
+Features:
+- Complete 3-stage Electron workflow (Prompt Builder, LLM Processing, Validation)
+- Template-based prompt generation with preamble/postamble integration
+- File-based LLM interaction workflow (handles length limits)
+- Auto-processing of LLM responses (JSON extraction, cleaning)
+- Q2LMS validation integration with clean module architecture
+- Professional UI with intuitive user experience
+- Error reporting and export functionality
+
+Status: 95% complete, final subprocess debugging in progress
+Architecture: Electron + Node.js + Python CLI integration
+Target: Educational question generation and validation workflow"
+
+git commit -m "$commitMessage"
+Write-Host "✅ Initial commit created" -ForegroundColor Green
+
+# Show repository status
+Write-Host "`n📊 Repository Status:" -ForegroundColor Yellow
+git log --oneline -n 5
+Write-Host ""
+git status
+
+# GitHub integration (optional)
+if (-not $SkipGitHubPush) {
+    Write-Host "`n🌐 GitHub Integration (Optional)" -ForegroundColor Cyan
+    Write-Host "=================================" -ForegroundColor Cyan
+    
+    $setupGitHub = Read-Host "Do you want to push to GitHub? (y/N)"
+    
+    if ($setupGitHub -eq 'y' -or $setupGitHub -eq 'Y') {
+        Write-Host "`n📋 GitHub Setup Instructions:" -ForegroundColor Yellow
+        Write-Host "1. Go to: https://github.com/new" -ForegroundColor White
+        Write-Host "2. Repository name: $RepoName" -ForegroundColor White
+        Write-Host "3. Description: Educational question generation and validation platform" -ForegroundColor White
+        Write-Host "4. Make it Public (or Private)" -ForegroundColor White
+        Write-Host "5. DO NOT initialize with README (we already have one)" -ForegroundColor White
+        Write-Host "6. Click 'Create repository'" -ForegroundColor White
+        
+        $repoUrl = Read-Host "`nEnter the GitHub repository URL (e.g., https://github.com/username/repo.git)"
+        
+        if ($repoUrl) {
+            try {
+                git remote add origin $repoUrl
+                Write-Host "✅ Remote origin added" -ForegroundColor Green
+                
+                # Create and push to main branch
+                git branch -M main
+                git push -u origin main
+                
+                Write-Host "✅ Repository pushed to GitHub!" -ForegroundColor Green
+                Write-Host "🌐 Your repository: $repoUrl" -ForegroundColor Cyan
+                
+                # Create development branch
+                git checkout -b development
+                git push -u origin development
+                git checkout main
+                
+                Write-Host "✅ Development branch created" -ForegroundColor Green
+                
+            } catch {
+                Write-Host "❌ Failed to push to GitHub. Check the URL and try manually:" -ForegroundColor Red
+                Write-Host "git remote add origin $repoUrl" -ForegroundColor Yellow
+                Write-Host "git branch -M main" -ForegroundColor Yellow
+                Write-Host "git push -u origin main" -ForegroundColor Yellow
+            }
+        }
+    } else {
+        Write-Host "⏭️  GitHub setup skipped. You can add it later with:" -ForegroundColor Yellow
+        Write-Host "git remote add origin [your-repo-url]" -ForegroundColor White
+        Write-Host "git branch -M main" -ForegroundColor White
+        Write-Host "git push -u origin main" -ForegroundColor White
+    }
+}
+
+# Summary
+Write-Host "`n🎉 Git Repository Setup Complete!" -ForegroundColor Green
+Write-Host "====================================" -ForegroundColor Green
+Write-Host "📁 Local repository: $ProjectRoot" -ForegroundColor Cyan
+Write-Host "📝 Files committed: Initial Q2 Desktop platform" -ForegroundColor Cyan
+Write-Host "📋 Status: Ready for development and collaboration" -ForegroundColor Cyan
+
+Write-Host "`n📋 Quick Git Commands:" -ForegroundColor Yellow
+Write-Host "git status              # Check status" -ForegroundColor White
+Write-Host "git add .               # Stage changes" -ForegroundColor White
+Write-Host "git commit -m 'message' # Commit changes" -ForegroundColor White
+Write-Host "git push                # Push to GitHub (if configured)" -ForegroundColor White
+Write-Host "git log --oneline       # View commit history" -ForegroundColor White
+
+Write-Host "`n✅ Your Q2 Desktop project is now safely backed up in Git!" -ForegroundColor Green
