@@ -457,7 +457,7 @@
                             <select id="question-types" class="form-control">
                                 <option value="mixed" selected>Mixed types</option>
                                 <option value="multiple_choice">Multiple choice only</option>
-                                <option value="multiple_dropdowns">Multiple dropdowns only</option>
+                                <option value="fill_in_multiple_blanks">Multiple dropdowns only</option>
                                 <option value="numerical">Numerical only</option>
                                 <option value="true_false">True/False only</option>
                             </select>
@@ -474,7 +474,6 @@
 
                     <div id="generated-prompt" class="hidden">
                         <h3 class="mt-3">📋 Complete Prompt:</h3>
-                        <div class="pre-wrap" id="prompt-output"></div>
                         
                         <div class="status info mt-3">
                             <span>ℹ️</span>
@@ -489,6 +488,7 @@
                             </div>
                         </div>
                         
+                        <div class="pre-wrap" id="prompt-output"></div>
                         <div class="mt-3">
                             <button class="btn btn-primary" onclick="savePromptFile()">💾 Save Complete Prompt as File</button>
                             <button class="btn btn-outline" onclick="copyPrompt()">📋 Copy to Clipboard</button>
@@ -655,28 +655,53 @@
         
         // Global state
         let currentStage = 1;
-        let selectedLLM = 'copilot'; // Default to Microsoft Copilot
+        let selectedLLM = 'copilot';
         let generatedPrompt = '';
         let processedData = null;
         let validationResults = null;
 
         // Initialize app
         document.addEventListener('DOMContentLoaded', async () => {
-            try {
-                const appInfo = await ipcRenderer.invoke('app-ready');
-                console.log('App initialized:', appInfo);
-            } catch (error) {
-                console.error('App initialization error:', error);
-            }
+            showStatus('Q2 Desktop loaded successfully', 'success');
         });
+
+        // Utility function for user feedback
+        function showStatus(message, type = 'info') {
+            // Create or update status message
+            let statusDiv = document.getElementById('app-status');
+            if (!statusDiv) {
+                statusDiv = document.createElement('div');
+                statusDiv.id = 'app-status';
+                statusDiv.className = 'status';
+                document.querySelector('.container').insertBefore(statusDiv, document.querySelector('.workflow'));
+            }
+            
+            statusDiv.className = `status ${type}`;
+            statusDiv.innerHTML = `<span>${getStatusIcon(type)}</span><span>${message}</span>`;
+            
+            // Auto-hide success messages
+            if (type === 'success') {
+                setTimeout(() => {
+                    if (statusDiv) statusDiv.style.display = 'none';
+                }, 3000);
+            }
+        }
+
+        function getStatusIcon(type) {
+            const icons = {
+                success: '✅',
+                error: '❌',
+                warning: '⚠️',
+                info: 'ℹ️'
+            };
+            return icons[type] || 'ℹ️';
+        }
 
         // Tab switching
         function switchTab(stage) {
-            // Hide all stages
             document.querySelectorAll('.stage').forEach(s => s.classList.remove('active'));
             document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
             
-            // Show selected stage
             document.getElementById(`stage-${stage}`).classList.add('active');
             document.getElementById(`tab-${stage}`).classList.add('active');
             
@@ -685,54 +710,50 @@
 
         // Stage 1: Prompt Builder
         function selectLLM(llm) {
-            // Clear previous selection
             document.querySelectorAll('.llm-option').forEach(opt => opt.classList.remove('selected'));
-            
-            // Select new LLM
             document.querySelector(`[data-llm="${llm}"]`).classList.add('selected');
             selectedLLM = llm;
         }
 
-        function generatePrompt() {
+        function loadExampleTemplate() {
+            const antennaExample = `You are an expert in antennas, and teaching a lecture. The topic is patch antennas and implementation on PCB, polarization characteristics are of particular interest.`;
+            document.getElementById('educational-context').value = antennaExample;
+        }
+
+        async function loadPromptTemplate() {
+            const genericTemplate = `You are an expert in [SUBJECT], and teaching a lecture. The topic is [TOPIC], [SPECIFIC_FOCUS] are of particular interest.`;
+            document.getElementById('educational-context').value = genericTemplate;
+        }
+
+        async function generatePrompt() {
             const context = document.getElementById('educational-context').value.trim();
             const count = document.getElementById('question-count').value;
             const types = document.getElementById('question-types').value;
 
             if (!context) {
-                alert('Please provide educational context');
+                showStatus('Please provide educational context', 'error');
                 return;
             }
 
             if (!selectedLLM) {
-                alert('Please select an LLM');
+                showStatus('Please select an LLM', 'error');
                 return;
             }
 
-            // Load preamble and postamble from files
-            loadPromptFiles(context, count, types);
-        }
-
-        async function loadPromptFiles(context, count, types) {
             try {
                 const btn = event.target;
                 btn.disabled = true;
                 btn.innerHTML = '<div class="loading"></div> Loading template...';
 
-                // Load preamble file
-                const preambleResult = await ipcRenderer.invoke('load-prompt-file', 
-                    'C:\\Users\\aknoesen\\Documents\\Knoesen\\Project-Root-Q2QTI\\q2prompt\\q2prompt_preamble_default.txt'
-                );
-                
-                // Load postamble file  
-                const postambleResult = await ipcRenderer.invoke('load-prompt-file',
-                    'C:\\Users\\aknoesen\\Documents\\Knoesen\\Project-Root-Q2QTI\\q2prompt\\q2prompt_postamble_default.txt'
-                );
+                // Load template files
+                const preambleResult = await ipcRenderer.invoke('load-prompt-file', 'q2prompt_preamble_default.txt');
+                const postambleResult = await ipcRenderer.invoke('load-prompt-file', 'q2prompt_postamble_default.txt');
 
                 if (!preambleResult.success || !postambleResult.success) {
                     throw new Error('Could not load prompt template files');
                 }
 
-                // Build complete prompt: preamble + user context + postamble
+                // Build complete prompt
                 let prompt = preambleResult.content + '\n\n';
                 prompt += context + '\n\n';
                 prompt += `Generate ${count} questions`;
@@ -748,20 +769,19 @@
                 document.getElementById('prompt-output').textContent = prompt;
                 document.getElementById('generated-prompt').classList.remove('hidden');
 
+                showStatus('Prompt generated successfully! Ready to save as file.', 'success');
+
                 btn.disabled = false;
                 btn.innerHTML = '🚀 Generate Complete Prompt';
 
             } catch (error) {
-                alert(`❌ Error loading prompt template: ${error.message}`);
+                showStatus(`Error loading prompt template: ${error.message}`, 'error');
                 
-                // Fallback to basic prompt if files not found
-                let prompt = `${context}\n\n`;
-                prompt += `Generate ${count} questions`;
-                
+                // Fallback prompt
+                let prompt = `${context}\n\nGenerate ${count} questions`;
                 if (types !== 'mixed') {
                     prompt += ` of type: ${types.replace('_', ' ')}`;
                 }
-                
                 prompt += ` in JSON format with proper structure for educational assessment.`;
 
                 generatedPrompt = prompt;
@@ -776,32 +796,29 @@
 
         async function savePromptFile() {
             if (!generatedPrompt) {
-                alert('No prompt to save');
+                showStatus('No prompt to save', 'error');
                 return;
             }
 
             try {
-                const result = await ipcRenderer.invoke('save-file', generatedPrompt, 'q2_prompt_for_llm.txt');
+                const result = await ipcRenderer.invoke('save-file', generatedPrompt, [
+                    { name: 'Text Files', extensions: ['txt'] },
+                    { name: 'All Files', extensions: ['*'] }
+                ]);
                 
                 if (result.success) {
-                    alert(`✅ Complete prompt saved as file!\n\nLocation: ${result.filePath}\n\nYou can now upload this file to your LLM.`);
-                } else if (!result.canceled) {
-                    alert(`❌ Save failed: ${result.error || 'Unknown error'}`);
+                    showStatus(`Complete prompt saved successfully!`, 'success');
+                } else if (!result.cancelled) {
+                    showStatus(`Save failed: ${result.error || 'Unknown error'}`, 'error');
                 }
             } catch (error) {
-                console.error('Save error:', error);
-                alert(`❌ Save failed: ${error.message}`);
+                showStatus(`Save failed: ${error.message}`, 'error');
             }
         }
 
         function copyPrompt() {
             navigator.clipboard.writeText(generatedPrompt).then(() => {
-                const btn = event.target;
-                const originalText = btn.textContent;
-                btn.textContent = '✅ Copied!';
-                setTimeout(() => {
-                    btn.textContent = originalText;
-                }, 2000);
+                showStatus('Prompt copied to clipboard!', 'success');
             });
         }
 
@@ -815,7 +832,7 @@
             const rawText = document.getElementById('llm-response').value.trim();
             
             if (!rawText) {
-                alert('Please paste the LLM response first');
+                showStatus('Please paste the LLM response first', 'error');
                 return;
             }
 
@@ -851,20 +868,21 @@
                 processedData = JSON.parse(processed);
                 document.getElementById('json-status').innerHTML = 
                     '<div class="status success"><span>✅</span><span>Valid JSON format detected</span></div>';
+                showStatus('JSON extracted and validated successfully!', 'success');
             } catch (error) {
                 document.getElementById('json-status').innerHTML = 
                     `<div class="status error"><span>❌</span><span>JSON Error: ${error.message}</span></div>`;
                 processedData = null;
+                showStatus(`JSON processing failed: ${error.message}`, 'error');
             }
         }
 
         function previewProcessed() {
             if (!processedData) {
-                alert('Please process the text first and ensure valid JSON');
+                showStatus('Please process the text first and ensure valid JSON', 'error');
                 return;
             }
             
-            // Show a preview of the questions
             const questions = processedData.questions || processedData;
             const preview = `Found ${questions.length} questions:\n\n` + 
                           questions.slice(0, 3).map((q, i) => 
@@ -884,9 +902,9 @@
             const text = document.getElementById('manual-json').value;
             try {
                 JSON.parse(text);
-                alert('✅ Valid JSON');
+                showStatus('Valid JSON', 'success');
             } catch (error) {
-                alert(`❌ JSON Error: ${error.message}`);
+                showStatus(`JSON Error: ${error.message}`, 'error');
             }
         }
 
@@ -898,40 +916,32 @@
                 document.getElementById('manual-editor').classList.add('hidden');
                 document.getElementById('json-status').innerHTML = 
                     '<div class="status success"><span>✅</span><span>Manual edits saved</span></div>';
+                showStatus('Manual edits saved successfully', 'success');
             } catch (error) {
-                alert(`❌ Cannot save: ${error.message}`);
+                showStatus(`Cannot save: ${error.message}`, 'error');
             }
         }
 
         function completeStage2() {
             if (!processedData) {
-                alert('Please process and validate the JSON first');
+                showStatus('Please process and validate the JSON first', 'error');
                 return;
             }
-            
-            // Debug log to verify data exists
-            console.log('Stage 2 data being passed:', processedData);
             
             document.getElementById('tab-2').classList.add('completed');
             switchTab(3);
             
-            // Update validation status to show data is ready
+            const questionCount = (processedData.questions || processedData).length;
             document.getElementById('validation-status').innerHTML = 
-                `<span>ℹ️</span><span>Ready to validate ${(processedData.questions || processedData).length} questions. Click "Run Validation" to begin.</span>`;
+                `<span>ℹ️</span><span>Ready to validate ${questionCount} questions. Click "Run Validation" to begin.</span>`;
         }
 
         // Stage 3: Validation
         async function runValidation() {
             if (!processedData) {
-                alert('No data to validate. Please complete Stage 2 first.');
-                console.log('processedData is:', processedData);
+                showStatus('No data to validate. Please complete Stage 2 first.', 'error');
                 return;
             }
-
-            // Debug log to verify data structure
-            console.log('Validation starting with data:', processedData);
-            const questionsArray = processedData.questions || processedData;
-            console.log('Questions array:', questionsArray);
 
             const btn = document.getElementById('validate-btn');
             btn.disabled = true;
@@ -941,29 +951,22 @@
             updateProgress(20, 'Preparing data...');
 
             try {
-                const options = {
-                    verbose: document.getElementById('verbose-output').checked,
-                    noAutoFix: !document.getElementById('auto-fix-unicode').checked,
-                    generateOutput: true
-                };
-
                 updateProgress(50, 'Running Q2Validate...');
 
-                const result = await ipcRenderer.invoke('run-q2validate', processedData, options);
+                const result = await ipcRenderer.invoke('run-q2validate', processedData);
                 
                 updateProgress(100, 'Validation complete!');
 
                 if (result.success) {
                     validationResults = result;
                     displayValidationResults(result);
+                    showStatus('Validation completed successfully!', 'success');
                 } else {
                     throw new Error(result.error || 'Validation failed');
                 }
 
             } catch (error) {
-                document.getElementById('validation-status').innerHTML = 
-                    `<div class="status error"><span>❌</span><span>Validation Error: ${error.message}</span></div>`;
-                console.error('Validation error:', error);
+                showStatus(`Validation Error: ${error.message}`, 'error');
             } finally {
                 btn.disabled = false;
                 btn.innerHTML = '🔍 Run Validation';
@@ -981,11 +984,8 @@
         function displayValidationResults(result) {
             document.getElementById('validation-results').classList.remove('hidden');
             
-            // Parse metrics from output
-            const output = result.output || '';
-            const metrics = parseValidationMetrics(output);
+            const metrics = parseValidationMetrics(result.rawOutput || '');
             
-            // Display metrics
             const metricsHtml = `
                 <div class="metric">
                     <div class="metric-value">${metrics.total}</div>
@@ -1010,17 +1010,13 @@
             `;
             
             document.getElementById('metrics-display').innerHTML = metricsHtml;
-            
-            // Display detailed output
             document.getElementById('detailed-results').innerHTML = 
-                `<div class="pre-wrap">${output}</div>`;
+                `<div class="pre-wrap">${result.rawOutput || 'No detailed output available'}</div>`;
             
-            // Show/hide error section
             if (metrics.ready < metrics.total) {
                 document.getElementById('error-section').classList.remove('hidden');
             }
             
-            // Enable export buttons
             document.getElementById('export-ready-btn').disabled = metrics.ready === 0;
             document.getElementById('send-q2lms-btn').disabled = metrics.ready === 0;
         }
@@ -1033,91 +1029,162 @@
             const successRate = (output.match(/Success Rate: ([\d.]+)%/) || [0, 0])[1];
             
             return {
-                total: parseInt(total),
-                valid: parseInt(valid),
-                unicode: parseInt(unicode),
-                ready: parseInt(ready),
-                successRate: parseFloat(successRate).toFixed(1)
+                total: parseInt(total) || 0,
+                valid: parseInt(valid) || 0,
+                unicode: parseInt(unicode) || 0,
+                ready: parseInt(ready) || 0,
+                successRate: parseFloat(successRate).toFixed(1) || 0
             };
         }
 
         async function exportReady() {
-            if (!validationResults || !validationResults.validatedData) {
-                alert('No validated data available');
+            if (!validationResults || !validationResults.outputData) {
+                showStatus('No validated data available', 'error');
                 return;
             }
 
             try {
-                const content = JSON.stringify(validationResults.validatedData, null, 2);
-                const result = await ipcRenderer.invoke('save-file', content, 'q2validate_ready.json');
+                const content = JSON.stringify(validationResults.outputData, null, 2);
+                const result = await ipcRenderer.invoke('save-file', content, [
+                    { name: 'JSON Files', extensions: ['json'] },
+                    { name: 'All Files', extensions: ['*'] }
+                ]);
                 
                 if (result.success) {
-                    alert(`✅ Ready questions exported to: ${result.filePath}`);
+                    showStatus('Ready questions exported successfully!', 'success');
                 }
             } catch (error) {
-                alert(`❌ Export failed: ${error.message}`);
+                showStatus(`Export failed: ${error.message}`, 'error');
             }
         }
 
         async function exportAll() {
             if (!processedData) {
-                alert('No data to export');
+                showStatus('No data to export', 'error');
                 return;
             }
 
             try {
                 const content = JSON.stringify(processedData, null, 2);
-                const result = await ipcRenderer.invoke('save-file', content, 'all_questions.json');
+                const result = await ipcRenderer.invoke('save-file', content, [
+                    { name: 'JSON Files', extensions: ['json'] },
+                    { name: 'All Files', extensions: ['*'] }
+                ]);
                 
                 if (result.success) {
-                    alert(`✅ All questions exported to: ${result.filePath}`);
+                    showStatus('All questions exported successfully!', 'success');
                 }
             } catch (error) {
-                alert(`❌ Export failed: ${error.message}`);
+                showStatus(`Export failed: ${error.message}`, 'error');
             }
         }
 
         async function sendToQ2LMS() {
-            if (!validationResults || !validationResults.validatedData) {
-                alert('No validated data available');
+            if (!validationResults || !validationResults.outputData) {
+                showStatus('No validated data available', 'error');
                 return;
             }
 
-            // For now, just export the file with Q2LMS-ready format
             await exportReady();
-            alert('📤 Questions are ready for Q2LMS import!\n\nNext steps:\n1. Open Q2LMS\n2. Import the exported JSON file\n3. Review and deploy questions');
+            showStatus('Questions are ready for Q2LMS import!', 'success');
         }
 
         async function submitErrorReport() {
+            const userNotes = await getUserFeedback();
+            
             const reportData = {
                 stage: 'validation',
                 selectedLLM: selectedLLM,
                 originalPrompt: generatedPrompt,
                 llmResponse: document.getElementById('llm-response').value,
                 processedData: processedData,
-                validationOutput: validationResults ? validationResults.output : 'No validation results',
-                userNotes: prompt('Optional: Describe what you were trying to achieve or any issues you encountered:') || ''
+                validationOutput: validationResults ? validationResults.rawOutput : 'No validation results',
+                userNotes: userNotes,
+                questionCount: processedData ? (processedData.questions || processedData).length : 0,
+                timestamp: new Date().toISOString()
             };
 
             try {
                 const result = await ipcRenderer.invoke('submit-error-report', reportData);
                 
                 if (result.success) {
-                    alert(`✅ Error report submitted successfully!\n\nReport ID: ${result.reportId}\n\nThank you for helping improve the system.`);
+                    showStatus('Error report submitted successfully! Thank you for helping improve the system.', 'success');
                 } else {
-                    alert(`❌ Failed to submit report: ${result.error}`);
+                    showStatus(`Failed to submit report: ${result.error}`, 'error');
                 }
             } catch (error) {
-                alert(`❌ Error submitting report: ${error.message}`);
+                showStatus(`Error submitting report: ${error.message}`, 'error');
             }
         }
 
+        function getUserFeedback() {
+            return new Promise((resolve) => {
+                const overlay = document.createElement('div');
+                overlay.style.cssText = `
+                    position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+                    background: rgba(0,0,0,0.5); z-index: 10000;
+                    display: flex; align-items: center; justify-content: center;
+                `;
+                
+                const dialog = document.createElement('div');
+                dialog.style.cssText = `
+                    background: white; padding: 30px; border-radius: 12px;
+                    max-width: 500px; width: 90%; box-shadow: 0 20px 40px rgba(0,0,0,0.3);
+                `;
+                
+                dialog.innerHTML = `
+                    <h3 style="margin: 0 0 15px 0; color: #333;">Help Improve Q2 Desktop</h3>
+                    <p style="margin: 0 0 15px 0; color: #666;">
+                        Your feedback helps us improve the system for all educators.
+                        Please describe what you were trying to achieve or any issues you encountered:
+                    </p>
+                    <textarea id="feedback-text" style="
+                        width: 100%; height: 100px; padding: 10px; border: 2px solid #ddd;
+                        border-radius: 6px; font-family: inherit; resize: vertical;
+                    " placeholder="Example: I was trying to generate questions about antenna theory, but some questions were missing required fields..."></textarea>
+                    <div style="margin-top: 20px; text-align: right;">
+                        <button id="cancel-feedback" style="
+                            padding: 10px 20px; margin-right: 10px; border: 2px solid #ccc;
+                            background: white; border-radius: 6px; cursor: pointer;
+                        ">Skip</button>
+                        <button id="submit-feedback" style="
+                            padding: 10px 20px; border: none; background: #667eea;
+                            color: white; border-radius: 6px; cursor: pointer;
+                        ">Submit Report</button>
+                    </div>
+                `;
+                
+                overlay.appendChild(dialog);
+                document.body.appendChild(overlay);
+                
+                const textarea = dialog.querySelector('#feedback-text');
+                const submitBtn = dialog.querySelector('#submit-feedback');
+                const cancelBtn = dialog.querySelector('#cancel-feedback');
+                
+                textarea.focus();
+                
+                submitBtn.onclick = () => {
+                    const feedback = textarea.value.trim();
+                    document.body.removeChild(overlay);
+                    resolve(feedback || 'No additional feedback provided');
+                };
+                
+                cancelBtn.onclick = () => {
+                    document.body.removeChild(overlay);
+                    resolve('User skipped feedback');
+                };
+                
+                textarea.onkeydown = (e) => {
+                    if (e.ctrlKey && e.key === 'Enter') {
+                        submitBtn.click();
+                    }
+                };
+            });
+        }
+
         function retryValidation() {
-            // Clear previous results and allow user to modify data
             document.getElementById('validation-results').classList.add('hidden');
             document.getElementById('error-section').classList.add('hidden');
-            
-            // Go back to stage 2 for editing
             switchTab(2);
         }
 
@@ -1127,27 +1194,11 @@
                 const result = await ipcRenderer.invoke('load-file');
                 if (result.success) {
                     document.getElementById('llm-response').value = result.content;
+                    showStatus('File loaded successfully', 'success');
                 }
             } catch (error) {
-                alert(`❌ Failed to load file: ${error.message}`);
+                showStatus(`Failed to load file: ${error.message}`, 'error');
             }
-        }
-
-        function loadExampleTemplate() {
-            // Load the specific antenna example
-            const antennaExample = `You are an expert in antennas, and teaching a lecture. The topic is patch antennas and implementation on PCB, polarization characteristics are of particular interest.`;
-            document.getElementById('educational-context').value = antennaExample;
-        }
-
-        async function loadPromptTemplate() {
-            // Load the generic template with placeholders
-            const genericTemplate = `You are an expert in [SUBJECT], and teaching a lecture. The topic is [TOPIC], [SPECIFIC_FOCUS] are of particular interest.`;
-            document.getElementById('educational-context').value = genericTemplate;
-        }
-
-        function clearContext() {
-            document.getElementById('educational-context').value = '';
-            document.getElementById('educational-context').focus();
         }
 
         async function savePromptDraft() {
@@ -1161,31 +1212,37 @@
 
             try {
                 const content = JSON.stringify(data, null, 2);
-                const result = await ipcRenderer.invoke('save-file', content, 'prompt_draft.json');
+                const result = await ipcRenderer.invoke('save-file', content, [
+                    { name: 'JSON Files', extensions: ['json'] },
+                    { name: 'All Files', extensions: ['*'] }
+                ]);
                 
                 if (result.success) {
-                    alert(`✅ Prompt draft saved to: ${result.filePath}`);
+                    showStatus('Prompt draft saved successfully', 'success');
                 }
             } catch (error) {
-                alert(`❌ Save failed: ${error.message}`);
+                showStatus(`Save failed: ${error.message}`, 'error');
             }
         }
 
         async function saveDraft() {
             if (!processedData) {
-                alert('No data to save');
+                showStatus('No data to save', 'error');
                 return;
             }
 
             try {
                 const content = JSON.stringify(processedData, null, 2);
-                const result = await ipcRenderer.invoke('save-file', content, 'processing_draft.json');
+                const result = await ipcRenderer.invoke('save-file', content, [
+                    { name: 'JSON Files', extensions: ['json'] },
+                    { name: 'All Files', extensions: ['*'] }
+                ]);
                 
                 if (result.success) {
-                    alert(`✅ Draft saved to: ${result.filePath}`);
+                    showStatus('Draft saved successfully', 'success');
                 }
             } catch (error) {
-                alert(`❌ Save failed: ${error.message}`);
+                showStatus(`Save failed: ${error.message}`, 'error');
             }
         }
     </script>
