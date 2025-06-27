@@ -1,0 +1,99 @@
+﻿# Q2QTI Desktop App - Beta Testing Version 1.0.0
+
+## 🎯 Welcome Beta Testers!
+
+Thank you for helping test the Q2QTI Desktop App - a revolutionary tool for educational question generation and validation.
+
+## 📋 System Requirements
+- Windows 10/11 (64-bit)
+- Python 3.8+ (download from python.org if not installed)
+- 200MB free disk space
+- Internet connection for LLM usage
+
+## 🚀 Quick Start (2 minutes)
+
+### Installation:
+1. **Extract** this ZIP file to any folder (e.g., Desktop)
+2. **Navigate** to the extracted folder
+3. **Double-click** "Q2 Desktop.exe" to launch
+4. **If prompted**, allow the app to run (it's safe!)
+
+### First Test:
+1. **Stage 1**: Generate a prompt about your subject area
+2. **Stage 2**: Use the prompt with ChatGPT/Copilot, paste response
+3. **Stage 3**: Run validation to see your results
+
+## 🧪 What to Test
+
+### ✅ Core Workflow
+- [ ] App launches without errors
+- [ ] Generate prompts for your subject matter
+- [ ] Process responses from different LLMs
+- [ ] Validation produces meaningful results
+- [ ] Export functions work
+
+### ✅ Educational Use Cases
+- [ ] Works with your specific subject area
+- [ ] Generated prompts produce good questions
+- [ ] Validation catches real issues
+- [ ] Output is usable for Q2LMS
+
+### ✅ User Experience
+- [ ] Interface is intuitive and easy to follow
+- [ ] Error messages are helpful
+- [ ] File operations work smoothly
+- [ ] Performance is acceptable
+
+### ✅ Edge Cases
+- [ ] Large question sets (15-20 questions)
+- [ ] Complex LLM responses
+- [ ] Invalid or malformed JSON
+- [ ] Different question types
+
+## 📧 Feedback Collection
+
+**Please report:**
+- What worked well
+- What was confusing or difficult
+- Any errors or crashes (with screenshots)
+- Suggestions for improvement
+- Time saved vs. current workflow
+
+**Send feedback to:** [Your email address]
+
+## 🆘 Troubleshooting
+
+### Common Issues:
+- **App won't start**: Run as Administrator
+- **Python not found**: Install Python from python.org
+- **Validation fails**: Check file permissions in app folder
+- **LLM errors**: Verify your JSON format in Stage 2
+
+### Getting Help:
+- Check console messages (Ctrl+Shift+I)
+- Try with different question types
+- Test with smaller question sets first
+- Restart the app if it becomes unresponsive
+
+## 🔧 Technical Details
+
+**Version:** 1.0.0-beta  
+**Build Date:** 2025-06-27  
+**Platform:** Windows x64  
+**Framework:** Electron  
+
+This is a **portable application** - no installation required, no registry changes.
+To uninstall, simply delete the folder.
+
+## 🎓 Educational Impact
+
+This tool is designed to:
+- **Streamline** question generation from hours to minutes
+- **Improve quality** through automated validation
+- **Standardize** prompts for consistent LLM outputs
+- **Integrate** seamlessly with Q2LMS workflow
+
+Your feedback helps make this tool better for all educators!
+
+---
+**Thank you for being an early adopter and helping improve educational technology!** 🚀

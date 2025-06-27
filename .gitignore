@@ -8,3 +8,17 @@ __pycache__/
 *.pyc
 .DS_Store
 Thumbs.db
+
+# Build outputs
+Q2-Desktop-App/dist/
+Q2-Desktop-App/node_modules/
+*.zip
+*-BETA-Testers/
+
+# Electron builder outputs
+Q2-Desktop-App/build/
+Q2-Desktop-App/out/
+
+# Temporary files
+*.tmp
+*.temp
